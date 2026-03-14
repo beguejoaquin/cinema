@@ -2,6 +2,7 @@ export const movies = [
   {
     id: 1,
     title: "The Shawshank Redemption",
+    poster: "movie_posters/shawshank.jpg",
     duration: 142,
     synopsis:
       "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.",
@@ -11,6 +12,7 @@ export const movies = [
   {
     id: 2,
     title: "The Godfather",
+    poster: "movie_posters/godfather.jpg",
     duration: 175,
     synopsis:
       "The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.",
@@ -20,6 +22,7 @@ export const movies = [
   {
     id: 3,
     title: "The Dark Knight",
+    poster: "movie_posters/batman.jpg",
     duration: 152,
     synopsis:
       "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.",
@@ -29,6 +32,7 @@ export const movies = [
   {
     id: 4,
     title: "Pulp Fiction",
+    poster: "movie_posters/pulp_fiction.jpg",
     duration: 154,
     synopsis:
       "The lives of two mob hitmen, a boxer, a gangster and his wife intertwine in four tales of violence and redemption.",
@@ -38,6 +42,7 @@ export const movies = [
   {
     id: 5,
     title: "Forrest Gump",
+    poster: "movie_posters/forrest.jpg",
     duration: 142,
     synopsis:
       "The presidencies of Kennedy and Johnson, the Vietnam War, and the Watergate scandal unfold from the perspective of an Alabama man with an IQ of 75.",
@@ -47,6 +52,7 @@ export const movies = [
   {
     id: 6,
     title: "Inception",
+    poster: "movie_posters/inception.jpg",
     duration: 148,
     synopsis:
       "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
@@ -56,6 +62,7 @@ export const movies = [
   {
     id: 7,
     title: "The Matrix",
+    poster: "movie_posters/matrix.jpg",
     duration: 136,
     synopsis:
       "A computer programmer discovers that reality as he knows it is a simulation created by machines, and joins a rebellion to free humanity.",
@@ -70,6 +77,7 @@ export const movies = [
   {
     id: 8,
     title: "Goodfellas",
+    poster: "movie_posters/goodfellas.jpg",
     duration: 146,
     synopsis:
       "The story of Henry Hill and his life in the mob, covering his relationship with his wife Karen Hill and his mob partners Jimmy Conway and Tommy DeVito.",
@@ -79,6 +87,7 @@ export const movies = [
   {
     id: 9,
     title: "The Silence of the Lambs",
+    poster: "movie_posters/silence.jpg",
     duration: 118,
     synopsis:
       "A young F.B.I. cadet must receive the help of an incarcerated and manipulative cannibal killer to help catch another serial killer, a madman who skins his victims.",
@@ -88,6 +97,7 @@ export const movies = [
   {
     id: 10,
     title: "Spirited Away",
+    poster: "movie_posters/spirited.jpg",
     duration: 125,
     synopsis:
       "During her family's move to the suburbs, a sullen 10-year-old girl wanders into a world ruled by gods, witches, and spirits, and where humans are changed into beasts.",
