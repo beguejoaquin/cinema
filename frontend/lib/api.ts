@@ -1,3 +1,5 @@
+import { error } from "console";
+
 export async function fetchProducts({
   client = false,
 }: { client?: boolean } = {}) {
@@ -11,7 +13,7 @@ export async function fetchProducts({
     cache: "no-store",
   });
   if (!res.ok) {
-    throw new Error("Failed to fetch products");
+    throw new Error(`Failed to fetch products ${res.status}`);
   }
   return res.json();
 }
