@@ -1,8 +1,9 @@
 import uuid
-from datetime import timedelta, timezone
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.db import models as m
+from django.utils import timezone
 from multiselectfield import MultiSelectField
 from rest_framework.exceptions import APIException
 
@@ -104,6 +105,7 @@ class Theater(m.Model):
     id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = m.CharField(choices=TheaterType)
     cinema = m.CharField(choices=Cinema)
+    number = m.IntegerField()
     rows = m.CharField(blank=True)
     number_of_seats = m.IntegerField()
 
@@ -126,12 +128,11 @@ class Seat(m.Model):
     theater = m.ForeignKey(Theater, related_name="seats", on_delete=m.CASCADE)
     row = m.CharField(max_length=1)
     number = m.IntegerField()
-    type = m.CharField()
+    type = m.CharField(choices=SeatType)
 
     def __str__(self) -> str:
         return self.get_code()
 
-    @property
     def is_available(self, showtime):
         for reservation in self.reservations.all():
             if reservation.showtime == showtime and reservation.status in [
@@ -143,7 +144,8 @@ class Seat(m.Model):
         return True
 
     def get_code(self):
-        return f"{(self.row)}{str(self.number).zfill(2)}-{str(self.theater).zfill(2)}"
+        # Create a RNN-TT code (R = Row, NN = Number, TT, Theater)
+        return f"{(self.row)}{str(self.number).zfill(2)}-{str(self.theater.number).zfill(2)}"
 
 
 class Showtime(m.Model):
@@ -164,7 +166,6 @@ class Showtime(m.Model):
     def __str__(self) -> str:
         return f"{self.movie.title}; {self.theater.cinema} - {self.theater};  start={self.start}:{self.start.minute}; end={self.end.hour}:{self.end.minute}; ID: {self.id}"
 
-    # TODO: Test this method.
     def get_available_seats(self):
         available_seats = self.theater.seats.exclude(reservations__showtime=self)
         return available_seats
@@ -194,53 +195,23 @@ class Reservation(m.Model):
         MovieTicket, related_name="reservations", on_delete=m.DO_NOTHING
     )
     status = m.CharField(choices=ReservationStatus)
-    expires_at = m.DateTimeField()
-    code = m.CharField(max_length=11, unique=True, editable=False)
+    expires_at = m.DateTimeField(blank=True)
+    code = m.CharField(max_length=19, unique=True, editable=False)
 
     def save(self, *args, **kwargs):
-        if not self.movie_ticket:
-            try:
-                movie_tickets = MovieTicket.objects.all()
-                # Regular theater and seat
-                if (
-                    self.seat.theater.type == TheaterType.REGULAR
-                    and self.seat.type == SeatType.REGULAR
-                ):
-                    self.movie_ticket = movie_tickets.get(type=MovieTicketType.REGULAR)
-                # Regular theater and premium seat
-                elif (
-                    self.seat.theater.type == TheaterType.REGULAR
-                    and self.seat.type == SeatType.PREMIUM
-                ):
-                    self.movie_ticket = movie_tickets.get(type=MovieTicketType.PREMIUM)
-                # Imax theater and regular seat
-                elif (
-                    self.seat.theater.type == TheaterType.IMAX
-                    and self.seat.type == SeatType.REGULAR
-                ):
-                    self.movie_ticket = movie_tickets.get(
-                        type=MovieTicketType.IMAX_REGULAR
-                    )
-                # Imax theater and premium seat
-                elif (
-                    self.seat.theater.type == TheaterType.IMAX
-                    and self.seat.type == SeatType.PREMIUM
-                ):
-                    self.movie_ticket = movie_tickets.get(
-                        type=MovieTicketType.IMAX_PREMIUM
-                    )
-            except MovieTicket.DoesNotExist() as err:
-                raise APIException("Movie ticket not found.") from err
-
         if not self.code:
             # Generate code format: SSS-TT-CC-YYMMDD-NN.
             # SSS = Seat, TT = Theater; CC = Cinema; YYMMDD = Year, Month, Day; NN = Sequential number
             seat_code = self.seat.get_code()
-            cinema = self.seat.cinema()
+            cinema = self.seat.cinema
             date = self.showtime.start.strftime("%y%m%d")
             count = Reservation.objects.filter(showtime=self.showtime).count() + 1
-
             self.code = f"{seat_code}-{cinema}-{date}-{str(count).zfill(2)}"
+
+        if not self.expires_at and self.showtime:
+            self.expires_at = self.showtime.start + timedelta(minutes=30)
+        elif not self.expires_at:
+            raise ValueError("expires_at requires a valid showtime")
 
         super().save(*args, **kwargs)
 
@@ -250,6 +221,7 @@ class Reservation(m.Model):
 
 class ReservationManager(m.Manager):
     def get_queryset(self):
+
         now = timezone.now()
         super().get_queryset().filter(status="pending", expires_at__lt=now).update(
             status=ReservationStatus.EXPIRED
