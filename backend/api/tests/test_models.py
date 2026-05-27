@@ -9,10 +9,18 @@ from api import models
 
 class ModelsTestCase(TestCase):
     def setUp(self) -> None:
+        # Create cinema
+        cinema = models.Cinema.objects.create(
+            name="North Cinema",
+            abbreviation="NRT",
+            location="150th North Av",
+            imax=False,
+        )
+
         # Create theater
         theater = models.Theater.objects.create(
             type=models.TheaterType.REGULAR,
-            cinema=models.Cinema.EAST_CINEMA,
+            cinema=cinema,
             number=1,
             number_of_seats=75,
         )
@@ -32,12 +40,14 @@ class ModelsTestCase(TestCase):
         # Create showtimes
         showtime1 = models.Showtime.objects.create(
             movie=movie1,
+            cinema=cinema,
             theater=theater,
             start=timezone.now() + timedelta(days=1),
             capacity_left=theater.number_of_seats,
         )
         showtime2 = models.Showtime.objects.create(
             movie=movie2,
+            cinema=cinema,
             theater=theater,
             start=timezone.now() + timedelta(days=2),
             capacity_left=theater.number_of_seats,
@@ -47,7 +57,7 @@ class ModelsTestCase(TestCase):
         seats = []
         for n in range(1, 6):
             seat = models.Seat.objects.create(
-                cinema=theater.cinema,
+                cinema=cinema,
                 theater=theater,
                 row="A",
                 number=n,
