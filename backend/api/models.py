@@ -4,8 +4,6 @@ from datetime import timedelta
 from django.contrib.auth.models import User
 from django.db import models as m
 from django.utils import timezone
-from multiselectfield import MultiSelectField
-from rest_framework.exceptions import APIException
 
 REGULAR_SEAT_PRICE = 12
 IMAX_SEAT_PRICE = 18
@@ -15,30 +13,12 @@ ROWS_PER_THEATER = 10
 SEATS_PER_ROW = 20
 
 
-class Genre(m.TextChoices):
-    ACTION = "ACT"
-    ADVENTURE = "ADV"
-    ANIMATION = "ANI"
-    COMEDY = "COM"
-    CRIME = "CRI"
-    DOCUMENTARY = "DOC"
-    DRAMA = "DRA"
-    FAMILY = "FAM"
-    FANTASY = "FAN"
-    HORROR = "HOR"
-    MYSTERY = "MYS"
-    ROMANCE = "ROM"
-    SCI_FI = "SCI"
-    THRILLER = "THR"
-    WAR = "WAR"
-    WESTERN = "WES"
-
-
-class Cinema(m.TextChoices):
-    NORTH_CINEMA = "NC"
-    SOUTH_CINEMA = "SC"
-    WEST_CINEMA = "WC"
-    EAST_CINEMA = "EC"
+class Cinema(m.Model):
+    id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = m.CharField(max_length=50, unique=True)
+    abbreviation = m.CharField(max_length=3, unique=True)
+    location = m.CharField(max_length=200, unique=True)
+    imax = m.BooleanField()
 
 
 class TheaterType(m.TextChoices):
@@ -46,67 +26,15 @@ class TheaterType(m.TextChoices):
     IMAX = "I"
 
 
-class SeatType(m.TextChoices):
-    REGULAR = "R"
-    PREMIUM = "P"
-
-
-class ReservationStatus(m.TextChoices):
-    VALID = "V"
-    PENDING = "P"
-    EXPIRED = "E"
-
-
-class ShowtimeStatus(m.TextChoices):
-    AVAILABLE = "A"
-    FULL = "F"
-    EXPIRED = "E"
-
-
-class MovieTicketType(m.TextChoices):
-    REGULAR = "R"
-    PREMIUM = "P"
-    IMAX_REGULAR = "IR"
-    IMAX_PREMIUM = "IP"
-
-
-class OrderStatus(m.TextChoices):
-    PAID = "P"
-    CANCELED = "CA"
-    COLLECTED = "CO"
-
-
-class Movie(m.Model):
-    id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = m.CharField(max_length=500)
-    duration = m.IntegerField(verbose_name="duration in minutes")
-    poster = m.ImageField(upload_to="uploads/movie_posters/", blank=True, null=True)
-    trailer_url = m.CharField(max_length=1000)
-    genres = MultiSelectField(choices=Genre, blank=True)
-    synopsis = m.CharField(max_length=1000)
-    director = m.CharField(max_length=255)
-    cast = m.CharField(max_length=2500)
-    imax = m.BooleanField(default=False)
-
-    def __str__(self) -> str:
-        return f"Title: {self.title}; ID: {self.id}"
-
-
-class MovieTicket(m.Model):
-    id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    type = m.CharField(choices=MovieTicketType)
-    price = m.DecimalField(max_digits=10, decimal_places=2)
-
-
 class Theater(m.Model):
     """Create the Theater object, add the rows with the set_rows method and then
     save the object."""
 
     id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    type = m.CharField(choices=TheaterType)
-    cinema = m.CharField(choices=Cinema)
+    type = m.CharField(choices=TheaterType, max_length=1)
+    cinema = m.ForeignKey(Cinema, related_name="theaters", on_delete=m.CASCADE)
     number = m.IntegerField()
-    rows = m.CharField(blank=True)
+    rows = m.CharField(blank=True, max_length=100)
     number_of_seats = m.IntegerField()
 
     def get_rows(self):
@@ -122,13 +50,18 @@ class Theater(m.Model):
         self.rows = "-".join(rows)
 
 
+class SeatType(m.TextChoices):
+    REGULAR = "R"
+    PREMIUM = "P"
+
+
 class Seat(m.Model):
     id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    cinema = m.CharField(choices=Cinema)
+    cinema = m.ForeignKey(Cinema, related_name="seats", on_delete=m.CASCADE)
     theater = m.ForeignKey(Theater, related_name="seats", on_delete=m.CASCADE)
     row = m.CharField(max_length=1)
     number = m.IntegerField()
-    type = m.CharField(choices=SeatType)
+    type = m.CharField(choices=SeatType, max_length=1)
 
     def __str__(self) -> str:
         return self.get_code()
@@ -148,9 +81,52 @@ class Seat(m.Model):
         return f"{(self.row)}{str(self.number).zfill(2)}-{str(self.theater.number).zfill(2)}"
 
 
+class MovieGenre(m.Model):
+    id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = m.CharField(max_length=50, unique=True)
+
+
+class Movie(m.Model):
+    id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = m.CharField(max_length=500, unique=True)
+    duration = m.IntegerField(verbose_name="duration in minutes")
+    poster = m.ImageField(upload_to="uploads/movie_posters/", blank=True, null=True)
+    trailer_url = m.CharField(max_length=1000)
+    genres = m.ManyToManyField(MovieGenre, related_name="movies")
+    synopsis = m.CharField(max_length=1000)
+    director = m.CharField(max_length=255)
+    cast = m.CharField(max_length=2500)
+    imax = m.BooleanField(default=False)
+
+    # TODO: Add "demand_rank" field for showtime schedule
+    # TODO: Add "state" field with "new", "available" and "unlisted" options
+    def __str__(self) -> str:
+        return f"Title: {self.title}; ID: {self.id}"
+
+
+class MovieTicketType(m.TextChoices):
+    REGULAR = "R"
+    PREMIUM = "P"
+    IMAX_REGULAR = "IR"
+    IMAX_PREMIUM = "IP"
+
+
+class MovieTicket(m.Model):
+    id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    type = m.CharField(choices=MovieTicketType, max_length=2)
+    price = m.DecimalField(max_digits=10, decimal_places=2)
+
+
+class ShowtimeStatus(m.TextChoices):
+    AVAILABLE = "A"
+    FULL = "F"
+    EXPIRED = "E"
+
+
 class Showtime(m.Model):
     id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     movie = m.ForeignKey(Movie, related_name="showtimes", on_delete=m.CASCADE)
+    cinema = m.ForeignKey(Cinema, related_name="showtimes", on_delete=m.CASCADE)
     theater = m.ForeignKey(Theater, related_name="showtimes", on_delete=m.CASCADE)
     start = m.DateTimeField()
     end = m.DateTimeField()
@@ -186,6 +162,12 @@ class ShowtimeManager(m.Manager):
         ).update(status=ShowtimeStatus.EXPIRED)
 
 
+class ReservationStatus(m.TextChoices):
+    VALID = "V"
+    PENDING = "P"
+    EXPIRED = "E"
+
+
 class Reservation(m.Model):
     id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = m.ForeignKey(User, related_name="reservations", on_delete=m.CASCADE)
@@ -194,16 +176,16 @@ class Reservation(m.Model):
     movie_ticket = m.ForeignKey(
         MovieTicket, related_name="reservations", on_delete=m.DO_NOTHING
     )
-    status = m.CharField(choices=ReservationStatus)
+    status = m.CharField(choices=ReservationStatus, max_length=1)
     expires_at = m.DateTimeField(blank=True)
-    code = m.CharField(max_length=19, unique=True, editable=False)
+    code = m.CharField(max_length=20, unique=True, editable=False)
 
     def save(self, *args, **kwargs):
         if not self.code:
-            # Generate code format: SSS-TT-CC-YYMMDD-NN.
-            # SSS = Seat, TT = Theater; CC = Cinema; YYMMDD = Year, Month, Day; NN = Sequential number
+            # Generate code format: SSS-TT-CCC-YYMMDD-NN.
+            # SSS = Seat, TT = Theater; CCC = Cinema; YYMMDD = Year, Month, Day; NN = Sequential number
             seat_code = self.seat.get_code()
-            cinema = self.seat.cinema
+            cinema = self.seat.cinema.abbreviation
             date = self.showtime.start.strftime("%y%m%d")
             count = Reservation.objects.filter(showtime=self.showtime).count() + 1
             self.code = f"{seat_code}-{cinema}-{date}-{str(count).zfill(2)}"
@@ -232,7 +214,7 @@ class ReservationManager(m.Manager):
 
 class Product(m.Model):
     id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = m.CharField(max_length=200)
+    name = m.CharField(max_length=200, unique=True)
     description = m.TextField()
     thumbnail = m.ImageField(
         upload_to="uploads/product_thumbnails/", blank=True, null=True
@@ -245,7 +227,12 @@ class Product(m.Model):
         return self.name
 
 
-# TODO: finish this model and define what models are pending.
+class OrderStatus(m.TextChoices):
+    PAID = "PA"
+    CANCELED = "CA"
+    COLLECTED = "CO"
+
+
 class Order(m.Model):
     id = m.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = m.ForeignKey(User, related_name="orders", on_delete=m.CASCADE)
@@ -253,4 +240,4 @@ class Order(m.Model):
     products = m.ManyToManyField(Product, related_name="orders")
     total = m.DecimalField(max_digits=10, decimal_places=2)
     made_at = m.DateTimeField(auto_now_add=True)
-    status = m.CharField(choices=OrderStatus)
+    status = m.CharField(choices=OrderStatus, max_length=2)
