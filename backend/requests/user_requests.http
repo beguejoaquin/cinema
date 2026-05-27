@@ -1,0 +1,13 @@
+# Home page
+### Get movies by genres
+GET http://localhost:8000/api/movies?genres=adventure
+### Get genres
+GET http://localhost:8000/api/movie-genres
+
+# Movie page
+### Get movie info
+GET http://localhost:8000/api/movies/3fe18877-4807-4a0e-b64a-396e58f3c6c7
+### Get cinemas
+GET http://localhost:8000/api/cinemas
+### Get showtimes
+GET http://localhost:8000/api/showtimes?cinema=
