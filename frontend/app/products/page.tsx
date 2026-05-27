@@ -14,7 +14,6 @@ export default async function Home() {
   } catch (error) {
     console.error("Error fetching products:", error);
   }
-
   return (
     <main className="min-h-screen p-8">
       <h1 className="text-3xl font-bold mb-8">Products</h1>
