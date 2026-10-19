@@ -97,9 +97,9 @@ class Movie(m.Model):
     director = m.CharField(max_length=255)
     cast = m.CharField(max_length=2500)
     imax = m.BooleanField(default=False)
-
     # TODO: Add "demand_rank" field for showtime schedule
     # TODO: Add "state" field with "new", "available" and "unlisted" options
+
     def __str__(self) -> str:
         return f"Title: {self.title}; ID: {self.id}"
 
@@ -192,7 +192,7 @@ class Reservation(m.Model):
 
         if not self.expires_at and self.showtime:
             self.expires_at = self.showtime.start + timedelta(minutes=30)
-        elif not self.expires_at:
+        elif not self.showtime:
             raise ValueError("expires_at requires a valid showtime")
 
         super().save(*args, **kwargs)

@@ -1,0 +1,3 @@
+def showtime_scheduler():
+    # TODO: Finish function to create showtimes
+    ...

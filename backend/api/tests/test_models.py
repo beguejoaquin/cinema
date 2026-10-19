@@ -104,8 +104,7 @@ class TheaterTestCase(ModelsTestCase):
 
 class SeatTestCase(ModelsTestCase):
     def test_seat_is_available(self):
-        movie = models.Movie.objects.get(title="The Matrix")
-        showtime = models.Showtime.objects.get(movie=movie)
+        showtime = models.Showtime.objects.first()
         seat1 = models.Seat.objects.get(reservations__showtime=showtime)
         seat2 = models.Seat.objects.exclude(reservations__showtime=showtime)[0]
         self.assertEqual(seat1.is_available(showtime), False)
@@ -113,11 +112,52 @@ class SeatTestCase(ModelsTestCase):
 
 
 class ShowtimeTestCase(ModelsTestCase):
-    def test_showtime_get_available_seats(self):
+    def test_showtime_save(self):
         movie = models.Movie.objects.get(title="The Matrix")
         showtime = models.Showtime.objects.get(movie=movie)
-        seats = models.Seat.objects.exclude(reservations__showtime=showtime)
+        end = showtime.start + timedelta(minutes=movie.duration + 15)
+        self.assertEqual(showtime.end, end)
+
+    def test_showtime_get_available_seats(self):
+        showtime = models.Showtime.objects.first()
+        seats = models.Seat.objects.filter(theater=showtime.theater).exclude(
+            reservations__showtime=showtime
+        )
         self.assertEqual(
             list(showtime.get_available_seats().values_list("id", flat=True)),
             list(seats.values_list("id", flat=True)),
         )
+
+
+class ShowtimeManagerTestCase(ModelsTestCase):
+    def test_showtime_manager_get_queryset(self):
+        showtime = models.Showtime.objects.first()
+        showtime.capacity_left = 0
+        showtime.save()
+
+        # The showtime should be marked as full.
+        showtime.refresh_from_db()
+        self.assertEqual(showtime.status, models.ShowtimeStatus.FULL)
+
+        # The showtime should be marked as expired after 10 minutes.
+        showtime.start = timezone.now() - timedelta(minutes=11)
+        showtime.save()
+        showtime.refresh_from_db()
+        self.assertEqual(showtime.status, models.ShowtimeStatus.EXPIRED)
+
+
+class ReservationTestCase(ModelsTestCase):
+    def test_reservation_save(self):
+        reservation = models.Reservation.objects.first()
+        seat_code = reservation.seat.get_code()
+        cinema = reservation.seat.cinema.abbreviation
+        date = reservation.showtime.start.strftime("%y%m%d")
+        count = models.Reservation.objects.filter(showtime=reservation.showtime).count()
+        code = f"{seat_code}-{cinema}-{date}-{str(count).zfill(2)}"
+        self.assertEqual(reservation.code, code)
+
+        expiration = reservation.showtime.start + timedelta(minutes=30)
+        self.assertEqual(reservation.expires_at, expiration)
+
+
+class ReservationManagerTestCase(ModelsTestCase): ...
